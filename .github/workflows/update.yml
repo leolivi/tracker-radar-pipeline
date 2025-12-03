@@ -1,0 +1,49 @@
+name: Update Tracker Radar
+
+on:
+  # each Monday at 9am
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout pipeline repo
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.ACTIONS_TOKEN }}
+
+      - name: Clone DuckDuckGo Tracker Radar
+        run: |
+          git clone https://github.com/duckduckgo/tracker-radar.git
+
+      - name: Install Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run extract script
+        run: node extract.js
+
+      - name: Push updated TS files to extension repo
+        run: |
+          git clone https://${{ secrets.ACTIONS_TOKEN }}@github.com/yourname/my-extension.git extension
+          cp dist/TRACKING_DOMAINS.ts extension/src/data/
+          cp dist/TRACKING_PARAMS.ts extension/src/data/
+
+          cd extension
+          git add src/data/TRACKING_DOMAINS.ts
+          git add src/data/TRACKING_PARAMS.ts
+
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Update tracker radar data"
+            git push
+          fi
