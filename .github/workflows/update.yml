@@ -33,7 +33,7 @@ jobs:
 
       - name: Push updated TS files to extension repo
         run: |
-          git clone https://${{ secrets.ACTIONS_TOKEN }}@github.com/yourname/my-extension.git extension
+          git clone https://${{ secrets.ACTIONS_TOKEN }}@github.com/leolivi/detecta.git extension
           cp dist/TRACKING_DOMAINS.ts extension/src/data/
           cp dist/TRACKING_PARAMS.ts extension/src/data/
 
