@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Pipeline to extract DuckDuckGo Tracker Radar data",
   "main": "extract.js",
+  "type": "module",
   "scripts": {
     "extract": "node extract.js"
   },
