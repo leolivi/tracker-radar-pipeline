@@ -1,76 +1,76 @@
 import fs from "fs";
 import path from "path";
 
-const DOMAINS_DIR = "tracker-radar/domains";
-const OUT_JSON = "dist/tracker.json";
+// define paths
+const SOURCE = "tracker-radar/domains";
+const OUTPUT = "dist/tracker.json";
 
+// collect all json files in the directory
 function getAllJsonFiles(dir) {
-  const files = [];
+  let files = [];
 
-  function walk(currentPath) {
-    const items = fs.readdirSync(currentPath);
+  // creates path for each item and checks if directory or file
+  for (const item of fs.readdirSync(dir)) {
+    const full = path.join(dir, item);
+    const stats = fs.statSync(full);
 
-    for (const item of items) {
-      const fullPath = path.join(currentPath, item);
-      const stat = fs.statSync(fullPath);
-
-      if (stat.isDirectory()) {
-        walk(fullPath);
-      } else if (item.endsWith(".json")) {
-        files.push(fullPath);
-      }
+    if (stats.isDirectory()) {
+      files = files.concat(getAllJsonFiles(full));
+    } else if (item.endsWith(".json")) {
+      files.push(full);
     }
   }
 
-  walk(dir);
   return files;
 }
 
-function extractData() {
-  const trackers = [];
+// list to hold extracted trackers
+function extract() {
   // go through all JSON files in the DOMAINS_DIR
-  const allFiles = getAllJsonFiles(DOMAINS_DIR);
-
+  const allFiles = getAllJsonFiles(SOURCE);
+  const allCategories = new Set();
   console.log(`Found ${allFiles.length} JSON files`);
 
-  for (const filePath of allFiles) {
-    try {
-      const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+  // map through files and extract relevant data
+  const trackers = allFiles
+    .map((file) => {
+      try {
+        const data = JSON.parse(fs.readFileSync(file, "utf8"));
+        // skip if no categories
+        if (!data.categories?.length) return null;
 
-      // skip if no categories
-      if (!data.categories || data.categories.length === 0) {
-        continue;
+        // collect all categories
+        data.categories.forEach((cat) => allCategories.add(cat));
+
+        // extract relevant fields
+        return {
+          domain: data.domain,
+          owner: data.owner?.name || null,
+          categories: data.categories,
+          prevalence: data.prevalence || 0,
+          fingerprinting: data.fingerprinting || 0,
+        };
+      } catch (e) {
+        console.error(`Error parsing ${file}: ${e.message}`);
+        return null;
       }
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.prevalence - a.prevalence);
 
-      trackers.push({
-        domain: data.domain,
-        owner: data.owner?.name || null,
-        categories: data.categories,
-        prevalence: data.prevalence || 0,
-        fingerprinting: data.fingerprinting || 0,
-        sites: data.sites || 0,
-      });
-    } catch (err) {
-      console.error(`Error parsing ${filePath}:`, err.message);
-    }
-  }
-
-  // sort descending
-  trackers.sort((a, b) => b.prevalence - a.prevalence);
-
-  // JSON output
   const output = {
     version: new Date().toISOString().split("T")[0],
-    trackers: trackers,
     totalCount: trackers.length,
+    trackers,
+    availabeCategories: Array.from(allCategories).sort(),
   };
 
-  if (!fs.existsSync("./dist")) {
-    fs.mkdirSync("./dist");
-  }
+  // ensure dist directory exists
+  if (!fs.existsSync("dist")) fs.mkdirSync("dist");
 
-  fs.writeFileSync(OUT_JSON, JSON.stringify(output, null, 2));
-  console.log(`Exported ${trackers.length} trackers with categories`);
+  // save to output file
+  fs.writeFileSync(OUTPUT, JSON.stringify(output, null, 2));
+  console.log(`Exported ${trackers.length} trackers`);
 }
 
-extractData();
+extract();

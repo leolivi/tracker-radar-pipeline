@@ -4,6 +4,7 @@ on:
   # each Monday at 9am
   schedule:
     - cron: "0 9 * * 1"
+    # manual trigger
   workflow_dispatch: {}
 
 jobs:
@@ -16,21 +17,22 @@ jobs:
         with:
           token: ${{ secrets.ACTIONS_TOKEN }}
 
+      # clone tracker-radar from DuckDuckGo repo
       - name: Clone DuckDuckGo Tracker Radar
         run: |
           git clone https://github.com/duckduckgo/tracker-radar.git
 
+      # install node to run extract script
       - name: Install Node
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: Install dependencies
-        run: npm install
-
+      # run extract script
       - name: Run extract script
         run: node extract.js
 
+      #  push to extension repo
       - name: Push updated TS files to extension repo
         run: |
           git clone https://${{ secrets.ACTIONS_TOKEN }}@github.com/leolivi/detecta.git extension
