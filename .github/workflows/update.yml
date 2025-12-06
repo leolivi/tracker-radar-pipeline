@@ -34,13 +34,11 @@ jobs:
       - name: Push updated TS files to extension repo
         run: |
           git clone https://${{ secrets.ACTIONS_TOKEN }}@github.com/leolivi/detecta.git extension
-          cp dist/TRACKING_DOMAINS.ts extension/src/data/
-          cp dist/TRACKING_PARAMS.ts extension/src/data/
-
+          cp dist/tracker.json extension/src/data/
           cd extension
-          git add src/data/TRACKING_DOMAINS.ts
-          git add src/data/TRACKING_PARAMS.ts
-
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add src/data/tracker.json
           if git diff --cached --quiet; then
             echo "No changes"
           else

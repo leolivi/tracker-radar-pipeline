@@ -1,64 +1,47 @@
 import fs from "fs";
 import path from "path";
 
-// DuckDuckGo source folder
-const SRC = "tracker-radar/entities";
+const ENTITIES_DIR = "tracker-radar/entities";
+const DOMAINS_DIR = "tracker-radar/domains";
+const OUT_JSON = "dist/tracker.json";
 
-// Output files in extension
-const OUT_DOMAINS = "dist/TRACKING_DOMAINS.ts";
-const OUT_PARAMS = "dist/TRACKING_PARAMS.ts";
+function extractData() {
+  const trackers = [];
 
-// Mapping DuckDuckGo -> TODO: SHOULD BE expanded later
-const CATEGORY_MAP = {
-  Advertising: "TrackerType.AD",
-  Analytics: "TrackerType.ANALYTICS",
-  Social: "TrackerType.SOCIAL",
-  "Tracker Pixel": "TrackerType.PIXEL",
-  Unknown: "TrackerType.UNKNOWN",
-};
+  // Domains durchgehen
+  const domainFiles = fs.readdirSync(DOMAINS_DIR);
 
-function extractDomains() {
-  const output = [];
-
-  const files = fs.readdirSync(SRC);
-  for (const file of files) {
+  for (const file of domainFiles) {
     if (!file.endsWith(".json")) continue;
 
-    const json = JSON.parse(fs.readFileSync(path.join(SRC, file), "utf8"));
+    const filePath = path.join(DOMAINS_DIR, file);
+    const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
 
-    const domain = json.domain;
-    const cat = json.categories?.[0];
-
-    if (!domain || !cat) continue;
-    if (!CATEGORY_MAP[cat]) continue;
-
-    output.push({ domain, type: CATEGORY_MAP[cat] });
+    trackers.push({
+      domain: data.domain,
+      owner: data.owner?.name || null,
+      categories: data.categories || [],
+      prevalence: data.prevalence?.total || 0,
+      fingerprinting: data.fingerprinting || 0,
+    });
   }
 
-  output.sort((a, b) => a.domain.localeCompare(b.domain));
+  // Nach Domain sortieren
+  trackers.sort((a, b) => a.domain.localeCompare(b.domain));
 
-  // Generate TS file
-  const ts = `import { TrackerType } from "../types/enum";
+  // JSON ausgeben
+  const output = {
+    version: new Date().toISOString().split("T")[0],
+    trackers: trackers,
+    totalCount: trackers.length,
+  };
 
-export const TRACKING_DOMAINS = [
-${output.map((e) => `  { domain: "${e.domain}", type: ${e.type} },`).join("\n")}
-];
-`;
+  if (!fs.existsSync("./dist")) {
+    fs.mkdirSync("./dist");
+  }
 
-  fs.writeFileSync(OUT_DOMAINS, ts);
-  console.log("Exported", output.length, "domains");
+  fs.writeFileSync(OUT_JSON, JSON.stringify(output, null, 2));
+  console.log(`Exported ${trackers.length} trackers`);
 }
 
-function extractParams() {
-  // Minimal curated params -> TODO: SOULD BE expanded later
-  const params = ["utm_", "fbclid", "gclid", "mc_eid", "pk_campaign", "ref"];
-
-  const ts = `export const TRACKING_PARAMS = [
-${params.map((p) => `  "${p}",`).join("\n")}
-];
-`;
-  fs.writeFileSync(OUT_PARAMS, ts);
-}
-
-extractDomains();
-extractParams();
+extractData();

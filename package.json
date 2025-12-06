@@ -1,0 +1,10 @@
+{
+  "name": "tracker-radar-pipeline",
+  "version": "1.0.0",
+  "description": "Pipeline to extract DuckDuckGo Tracker Radar data",
+  "main": "extract.js",
+  "scripts": {
+    "extract": "node extract.js"
+  },
+  "dependencies": {}
+}
