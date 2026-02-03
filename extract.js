@@ -28,49 +28,48 @@ function getAllJsonFiles(dir) {
 function extract() {
   // go through all JSON files in the DOMAINS_DIR
   const allFiles = getAllJsonFiles(SOURCE);
-  const allCategories = new Set();
-  console.log(`Found ${allFiles.length} JSON files`);
 
   // map through files and extract relevant data
   const trackers = allFiles
     .map((file) => {
-      try {
-        const data = JSON.parse(fs.readFileSync(file, "utf8"));
-        // skip if no categories
-        if (!data.categories?.length) return null;
-
-        // collect all categories
-        data.categories.forEach((cat) => allCategories.add(cat));
-
+      const data = JSON.parse(fs.readFileSync(file, "utf8"));
+      // skip if no categories
+      if (!data.categories?.length) return null;
         // extract relevant fields
-        return {
-          domain: data.domain,
-          owner: data.owner?.name || null,
-          categories: data.categories,
-          prevalence: data.prevalence || 0,
-          fingerprinting: data.fingerprinting || 0,
-        };
-      } catch (e) {
-        console.error(`Error parsing ${file}: ${e.message}`);
-        return null;
-      }
+       return {
+        domain: data.domain,
+        owner: data.owner?.name || null,
+        categories: data.categories,
+        prevalence: data.prevalence || 0,
+        fingerprinting: data.fingerprinting || 0,
+      };
     })
     .filter(Boolean)
     .sort((a, b) => b.prevalence - a.prevalence);
 
+  // export as an object
+  const trackersMap = {};
+  trackers.forEach(t => {
+    trackersMap[t.domain] = {
+      o: t.owner,
+      c: t.categories,
+      p: t.prevalence,
+      f: t.fingerprinting
+    };
+  });
+
   const output = {
     version: new Date().toISOString().split("T")[0],
     totalCount: trackers.length,
-    trackers,
-    availabeCategories: Array.from(allCategories).sort(),
+    trackers: trackersMap
   };
 
   // ensure dist directory exists
   if (!fs.existsSync("dist")) fs.mkdirSync("dist");
 
   // save to output file
-  fs.writeFileSync(OUTPUT, JSON.stringify(output, null, 2));
-  console.log(`Exported ${trackers.length} trackers`);
+  fs.writeFileSync(OUTPUT, JSON.stringify(output));
+  console.log(`Exported ${Object.keys(trackersMap).length} trackers`);
 }
 
 extract();
