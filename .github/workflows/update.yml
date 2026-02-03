@@ -36,14 +36,15 @@ jobs:
       - name: Push updated TS files to extension repo
         run: |
           git clone https://${{ secrets.ACTIONS_TOKEN }}@github.com/leolivi/detecta.git extension
-          cp dist/tracker.json extension/src/data/
+          cp dist/tracker-core.json extension/src/data/
+          cp dist/tracker-extended.json extension/src/data/
           cd extension
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add src/data/tracker.json
+          git add src/data/tracker-core.json src/data/tracker-extended.json
           if git diff --cached --quiet; then
             echo "No changes"
           else
-            git commit -m "Update tracker radar data"
+            git commit -m "Update tracker radar data (core + extended)"
             git push
           fi

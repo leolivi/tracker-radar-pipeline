@@ -3,7 +3,6 @@ import path from "path";
 
 // define paths
 const SOURCE = "tracker-radar/domains";
-const OUTPUT = "dist/tracker.json";
 
 // collect all json files in the directory
 function getAllJsonFiles(dir) {
@@ -47,10 +46,23 @@ function extract() {
     .filter(Boolean)
     .sort((a, b) => b.prevalence - a.prevalence);
 
+  // split to improve performance
+  const top = trackers.slice(0, 2000);
+  const extended = trackers.slice(2000);
+
   // export as an object
-  const trackersMap = {};
-  trackers.forEach(t => {
-    trackersMap[t.domain] = {
+  const coreMap = {};
+  top.forEach(t => {
+    coreMap[t.domain] = {
+      o: t.owner,
+      c: t.categories,
+      p: t.prevalence,
+      f: t.fingerprinting
+    };
+  });
+  const extendedMap = {};
+  extended.forEach(t => {
+    extendedMap[t.domain] = {
       o: t.owner,
       c: t.categories,
       p: t.prevalence,
@@ -58,18 +70,23 @@ function extract() {
     };
   });
 
-  const output = {
-    version: new Date().toISOString().split("T")[0],
-    totalCount: trackers.length,
-    trackers: trackersMap
-  };
-
   // ensure dist directory exists
   if (!fs.existsSync("dist")) fs.mkdirSync("dist");
 
   // save to output file
-  fs.writeFileSync(OUTPUT, JSON.stringify(output));
-  console.log(`Exported ${Object.keys(trackersMap).length} trackers`);
+  fs.writeFileSync("dist/tracker-core.json", JSON.stringify({
+    version: new Date().toISOString().split("T")[0],
+    totalCount: top.length,
+    trackers: coreMap
+  }));
+  
+  fs.writeFileSync("dist/tracker-extended.json", JSON.stringify({
+    version: new Date().toISOString().split("T")[0],
+    totalCount: extended.length,
+    trackers: extendedMap
+  }));
+  
+  console.log(`Core: ${top.length}, Extended: ${extended.length}`);
 }
 
 extract();
