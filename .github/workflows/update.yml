@@ -32,13 +32,29 @@ jobs:
       - name: Run extract script
         run: node extract.js
 
-      #  push to extension repo
-      - name: Push updated TS files to extension repo
+     #  push to extension repos
+      - name: Push updated TS files to detecta repo
         run: |
-          git clone https://${{ secrets.ACTIONS_TOKEN }}@github.com/leolivi/detecta.git extension
-          cp dist/tracker-core.json extension/src/data/
-          cp dist/tracker-extended.json extension/src/data/
-          cd extension
+          git clone https://${{ secrets.ACTIONS_TOKEN }}@github.com/leolivi/detecta.git detecta
+          cp dist/tracker-core.json detecta/src/data/
+          cp dist/tracker-extended.json detecta/src/data/
+          cd detecta
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add src/data/tracker-core.json src/data/tracker-extended.json
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Update tracker radar data (core + extended)"
+            git push
+          fi
+
+      - name: Push updated TS files to klartxt repo
+        run: |
+          git clone https://${{ secrets.ACTIONS_TOKEN }}@github.com/leolivi/klartxt.git klartxt
+          cp dist/tracker-core.json klartxt/src/data/
+          cp dist/tracker-extended.json klartxt/src/data/
+          cd klartxt
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add src/data/tracker-core.json src/data/tracker-extended.json
