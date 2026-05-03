@@ -85,8 +85,27 @@ function extract() {
     totalCount: extended.length,
     trackers: extendedMap
   }));
-  
-  console.log(`Core: ${top.length}, Extended: ${extended.length}`);
+
+  // fingerprinting domains: f >= 2 (medium/high), sorted for stable git diffs                                                              
+  const fingerprintDomains = trackers                                                                                                       
+    .filter(t => t.fingerprinting >= 2)                                                                                                     
+    .map(t => t.domain)                                                                                                                     
+    .sort();                                                                                                                                
+                                                               
+  fs.writeFileSync("dist/fingerprint-domains.json", JSON.stringify({                                                                        
+    _meta: {
+      source: "DuckDuckGo Tracker Radar",                                                                                                   
+      source_url: "https://github.com/duckduckgo/tracker-radar",
+      field: "fingerprinting: 0=none 1=low 2=medium 3=high",                                                                                
+      min_score_included: 2,
+      generated_at: new Date().toISOString(),                                                                                               
+      total_domains: fingerprintDomains.length,                
+    },                                                                                                                                      
+    domains: fingerprintDomains,                               
+  }));
+                                                                                                                                            
+  console.log(`Core: ${top.length}, Extended: ${extended.length}, Fingerprint: ${fingerprintDomains.length}`);  
+
 }
 
 extract();
