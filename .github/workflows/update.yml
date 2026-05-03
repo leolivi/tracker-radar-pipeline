@@ -52,8 +52,8 @@ jobs:
       - name: Push updated TS files to klartxt repo
         run: |
           git clone https://${{ secrets.ACTIONS_TOKEN }}@github.com/leolivi/klartxt.git klartxt
-          cp dist/tracker-core.json klartxt/src/data/
-          cp dist/tracker-extended.json klartxt/src/data/
+          cp dist/tracker-core.json klartxt/src/data/trackers/
+          cp dist/tracker-extended.json klartxt/src/data/trackers/
           cd klartxt
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
