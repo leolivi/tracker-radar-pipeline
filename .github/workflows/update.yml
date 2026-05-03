@@ -54,10 +54,11 @@ jobs:
           git clone https://${{ secrets.ACTIONS_TOKEN }}@github.com/leolivi/klartxt.git klartxt
           cp dist/tracker-core.json klartxt/src/data/trackers/
           cp dist/tracker-extended.json klartxt/src/data/trackers/
+          cp dist/fingerprint-domains.json klartxt/src/data/trackers/ 
           cd klartxt
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add src/data/tracker-core.json src/data/tracker-extended.json
+          git add src/data/trackers/tracker-core.json src/data/trackers/tracker-extended.json src/data/trackers/fingerprint-domains.json
           if git diff --cached --quiet; then
             echo "No changes"
           else
