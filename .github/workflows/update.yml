@@ -65,15 +65,16 @@ jobs:
           cp dist/tracker-core.json klartxt/src/data/trackers/
           cp dist/tracker-extended.json klartxt/src/data/trackers/
           cp dist/fingerprint-domains.json klartxt/src/data/trackers/
+          cp dist/tracking-params.json klartxt/src/data/trackers/
           cp dist/cmp-selectors.json klartxt/src/data/dsgvo/
           cp dist/cookie-heuristics.json klartxt/src/data/cookies/
           cd klartxt
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add src/data/trackers/tracker-core.json src/data/trackers/tracker-extended.json src/data/trackers/fingerprint-domains.json src/data/dsgvo/cmp-selectors.json src/data/cookies/cookie-heuristics.json
+          git add src/data/trackers/tracker-core.json src/data/trackers/tracker-extended.json src/data/trackers/fingerprint-domains.json src/data/trackers/tracking-params.json src/data/dsgvo/cmp-selectors.json src/data/cookies/cookie-heuristics.json
           if git diff --cached --quiet; then
             echo "No changes"
           else
-            git commit -m "Update tracker radar data (core + extended + fingerprints + cookies)"
+            git commit -m "Update tracker radar data"
             git push
           fi

@@ -2,7 +2,6 @@ import fs from "fs";
 import path from "path";
 
 const SOURCE = "tracker-radar/domains";
-const TRACKER_RADAR_URL = "https://github.com/duckduckgo/tracker-radar";
 
 
 // collect all json files in the directory
@@ -83,15 +82,21 @@ export async function buildTrackerHeuristics() {
     .sort();
 
   fs.writeFileSync("dist/fingerprint-domains.json", JSON.stringify({
-    _meta: {
-      source: "DuckDuckGo Tracker Radar",
-      source_url: TRACKER_RADAR_URL,
-      field: "fingerprinting: 0=none 1=low 2=medium 3=high",
-      min_score_included: 2,
-      generated_at: new Date().toISOString(),
-      total_domains: fingerprintDomains.length,
-    },
+    version: new Date().toISOString().split("T")[0],
     domains: fingerprintDomains,
   }));
- 
+
+  
+  // --- TRACKING PARAMS FROM DUCK DUCK GO --- //
+  const ADDITIONAL_PARAMS = ["twclid", "ttclid", "li_fat_id"];
+  const trackingParamsRaw = JSON.parse(
+    fs.readFileSync("tracker-radar/build-data/generated/tracking_parameters.json", "utf8")
+  );
+  const params = [...new Set([...Object.keys(trackingParamsRaw.params), ...ADDITIONAL_PARAMS])];
+
+  fs.writeFileSync("dist/tracking-params.json", JSON.stringify({
+     version: new Date().toISOString().split("T")[0],
+    params,
+  }));
+
 }
