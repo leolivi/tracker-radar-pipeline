@@ -1,55 +1,33 @@
-import fs from "fs";
+import { DataCollector } from "./DataCollector.js";
 
 const SOURCE = "open-cookie-database/open-cookie-database.json";
 
-// --- Cookies Data FROM Open Cookie Database --- //
 // names that belong in SESSION even when the DB category is Functional
 const SESSION_LIKE = ["session", "sess", "sid", "csrf", "xsrf", "token", "auth", "jsession", "phpsess", "vwo"];
 
+// --- Cookies Data FROM Open Cookie Database --- //
 export async function buildCookieHeuristics() {
-  const db = JSON.parse(fs.readFileSync(SOURCE, "utf8"));
-  const analytics = {};
-  const advertising = {};
-  const necessary = {};
-  const session = {};
+  const collector = new DataCollector(SOURCE);
+  const db = collector.data;
 
-  for (const entries of Object.values(db)) {
-    for (const entry of entries) {
+  const { analytics, advertising, necessary, session } = Object.values(db)
+    .flat()
+    .reduce((maps, entry) => {
       const name = entry.cookie?.trim();
-      if (!name) continue;
-
+      if (!name) return maps;
       switch (entry.category) {
-        case "Analytics":
-          analytics[name] = true;
-          break;
-        case "Marketing":
-          advertising[name] = true;
-          break;
-        case "Security":
-          session[name] = true;
-          break;
+        case "Analytics": maps.analytics[name] = true; break;
+        case "Marketing": maps.advertising[name] = true; break;
+        case "Security": maps.session[name] = true; break;
         case "Functional": {
           const lower = name.toLowerCase();
-          const isSession = SESSION_LIKE.some((p) => lower.includes(p));
-          (isSession ? session : necessary)[name] = true;
+          (SESSION_LIKE.some((p) => lower.includes(p)) ? maps.session : maps.necessary)[name] = true;
           break;
         }
       }
-    }
-  }
+      return maps;
+    }, { analytics: {}, advertising: {}, necessary: {}, session: {} });
 
-  // ensure dist directory exists
-  if (!fs.existsSync("dist")) fs.mkdirSync("dist");
-
-  const totalCount = Object.keys(analytics).length + Object.keys(advertising).length
-    + Object.keys(necessary).length + Object.keys(session).length;
-
-  fs.writeFileSync("dist/cookie-heuristics.json", JSON.stringify({
-    version: new Date().toISOString().split("T")[0],
-    totalCount,
-    analytics,
-    advertising,
-    necessary,
-    session,
-  }));
+  // save to output file
+  collector.writeDist("cookie-heuristics.json", { analytics, advertising, necessary, session });
 }

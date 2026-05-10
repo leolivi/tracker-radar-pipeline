@@ -1,32 +1,22 @@
-import fs from "fs";
+import { DataCollector } from "./DataCollector.js";
 
 const SOURCE = "consent-o-matic/Rules.json";
 
 // --- CMP Data FROM CONSENT-O-MATIC --- //
 // CMP selectors from Consent-O-Matic
 export async function buildCMPHeuristics() {
-  const rules = JSON.parse(fs.readFileSync(SOURCE, "utf8"));
+  const collector = new DataCollector(SOURCE);
+  const rules = collector.data;
 
-  const cmpMap = {};
-  const selectorMap = {};
+  const cmps = Object.fromEntries(Object.keys(rules).map((name) => [name, true]));
+  const selectors = Object.fromEntries(
+    Object.values(rules)
+      .flatMap((config) => config.detectors ?? [])
+      .flatMap((detector) => ["presentMatcher", "showingMatcher"].map((key) => detector[key]?.target?.selector))
+      .filter(Boolean)
+      .map((selector) => [selector, true])
+  );
 
-  for (const [name, config] of Object.entries(rules)) {
-    cmpMap[name] = true;
-    for (const detector of config.detectors ?? []) {
-      for (const key of ["presentMatcher", "showingMatcher"]) {
-        const selector = detector[key]?.target?.selector;
-        if (selector) selectorMap[selector] = true;
-      }
-    }
-  }
-
-  // ensure dist directory exists
-  if (!fs.existsSync("dist")) fs.mkdirSync("dist");
-
-  fs.writeFileSync("dist/cmp-selectors.json", JSON.stringify({
-    version: new Date().toISOString().split("T")[0],
-    totalCount: Object.keys(cmpMap).length,
-    cmps: cmpMap,
-    selectors: selectorMap,
-  }));
+  // save to output file
+  collector.writeDist("cmp-selectors.json", { cmps, selectors });
 }

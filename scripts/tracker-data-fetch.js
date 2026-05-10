@@ -1,38 +1,25 @@
-import fs from "fs";
-import path from "path";
+import { DataCollector } from "./DataCollector.js";
 
 const SOURCE = "tracker-radar/domains";
 
+const ADDITIONAL_PARAMS = ["twclid", "ttclid", "li_fat_id"];
 
-// collect all json files in the directory
-function getAllJsonFiles(dir) {
-  let files = [];
-
-  for (const item of fs.readdirSync(dir)) {
-    const full = path.join(dir, item);
-    const stats = fs.statSync(full);
-
-    if (stats.isDirectory()) {
-      files = files.concat(getAllJsonFiles(full));
-    } else if (item.endsWith(".json")) {
-      files.push(full);
-    }
-  }
-
-  return files;
-}
+/* 
+TRACKERS, FINGERPRINT DOMAINS AND TRACKING PARAMS FROM DUCK DUCK GO 
+*/
 
 export async function buildTrackerHeuristics() {
-   // go through all JSON files in the DOMAINS_DIR
-  const allFiles = getAllJsonFiles(SOURCE);
+  const collector = new DataCollector();
 
-  // --- TRACKERS FROM DUCK DUCK GO --- //
+// --- TRACKERS FROM DUCK DUCK GO --- //
+  // go through all JSON files in the DOMAINS_DIR
+  const allFiles = DataCollector.getAllJsonFiles(SOURCE);
+
   // map through files and extract relevant data
   const trackers = allFiles
     .map((file) => {
-      const data = JSON.parse(fs.readFileSync(file, "utf8"));
+      const data = new DataCollector(file).data;
       if (!data.categories?.length) return null;
-      // extract relevant fields
       return {
         domain: data.domain,
         owner: data.owner?.name || null,
@@ -49,54 +36,30 @@ export async function buildTrackerHeuristics() {
   const extended = trackers.slice(2000);
 
   // export as an object
-  const coreMap = {};
-  top.forEach((t) => {
-    coreMap[t.domain] = { o: t.owner, c: t.categories, p: t.prevalence, f: t.fingerprinting };
-  });
-  const extendedMap = {};
-  extended.forEach((t) => {
-    extendedMap[t.domain] = { o: t.owner, c: t.categories, p: t.prevalence, f: t.fingerprinting };
-  });
-
-  // ensure dist directory exists
-  if (!fs.existsSync("dist")) fs.mkdirSync("dist");
+  const toEntry = (t) => [t.domain, { o: t.owner, c: t.categories, p: t.prevalence, f: t.fingerprinting }];
+  const coreMap = Object.fromEntries(top.map(toEntry));
+  const extendedMap = Object.fromEntries(extended.map(toEntry));
 
   // save to output file
-  fs.writeFileSync("dist/tracker-core.json", JSON.stringify({
-    version: new Date().toISOString().split("T")[0],
-    totalCount: top.length,
-    trackers: coreMap,
-  }));
+  collector.writeDist("tracker-core.json", { trackers: coreMap });
+  collector.writeDist("tracker-extended.json", { trackers: extendedMap });
 
-  fs.writeFileSync("dist/tracker-extended.json", JSON.stringify({
-    version: new Date().toISOString().split("T")[0],
-    totalCount: extended.length,
-    trackers: extendedMap,
-  }));
-
-  // --- FINGERPRINT DOMAINS FROM DUCK DUCK GO --- //
-  // fingerprinting domains: f >= 2 (medium/high), sorted for stable git diffs       
-  const fingerprintDomains = trackers
-    .filter((t) => t.fingerprinting >= 2)
-    .map((t) => t.domain)
-    .sort();
-
-  fs.writeFileSync("dist/fingerprint-domains.json", JSON.stringify({
-    version: new Date().toISOString().split("T")[0],
-    domains: fingerprintDomains,
-  }));
-
-  
-  // --- TRACKING PARAMS FROM DUCK DUCK GO --- //
-  const ADDITIONAL_PARAMS = ["twclid", "ttclid", "li_fat_id"];
-  const trackingParamsRaw = JSON.parse(
-    fs.readFileSync("tracker-radar/build-data/generated/tracking_parameters.json", "utf8")
+// --- FINGERPRINT DOMAINS FROM DUCK DUCK GO --- //
+  // fingerprinting domains >= 2 (medium/high)
+  const fingerprintMap = Object.fromEntries(
+    trackers.filter((t) => t.fingerprinting >= 2).map((t) => [t.domain, true])
   );
-  const params = [...new Set([...Object.keys(trackingParamsRaw.params), ...ADDITIONAL_PARAMS])];
 
-  fs.writeFileSync("dist/tracking-params.json", JSON.stringify({
-     version: new Date().toISOString().split("T")[0],
-    params,
-  }));
+  // save to output file
+  collector.writeDist("fingerprint-domains.json", { domains: fingerprintMap });
+  
+// --- TRACKING PARAMS FROM DUCK DUCK GO --- //
+  const trackingParamsRaw = new DataCollector("tracker-radar/build-data/generated/tracking_parameters.json").data;
+  
+  const paramsMap = Object.fromEntries(
+    [...Object.keys(trackingParamsRaw.params), ...ADDITIONAL_PARAMS].map((key) => [key, true])
+  );
 
+  // save to output file
+  collector.writeDist("tracking-params.json", { params: paramsMap });
 }
